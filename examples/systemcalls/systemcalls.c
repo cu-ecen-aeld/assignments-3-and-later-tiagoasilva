@@ -9,15 +9,51 @@
 */
 bool do_system(const char *cmd)
 {
-
-/*
- * TODO  add your code here
- *  Call the system() function with the command set in the cmd
- *   and return a boolean true if the system() call completed with success
- *   or false() if it returned a failure
-*/
-
-    return true;
+    int result = system(cmd);
+    
+    if(cmd == NULL)
+    {
+        if (result == 0)
+        {
+            printf("Shell is not available.");
+            return false;
+        }
+        else
+        {
+            printf("Shell is available.");
+            return true;
+        }
+    }
+    else
+    {
+        if (result == -1)
+        {
+            printf("A child process could not be created, or its status could not be retrieved. Errno: %d. Strerror output: %s\n", errno, strerror(errno));
+            return false;
+        }
+        else
+        {
+            if (WIFSIGNALED(result) && (WTERMSIG(result) == SIGINT || WTERMSIG(result) == SIGQUIT))
+            {
+                printf("Signal SIGINT or SIGQUIT received. Terminating the process.\n");
+                return false;
+            }
+            else
+            {
+                if (WIFEXITED(result))
+                {
+                    int exit_code = WEXITSTATUS(result);
+                    printf("Command exited with code: %d\n", exit_code);
+                    return true;
+                }
+                else
+                {
+                    printf("Command did not terminate normally.\n");
+                    return false;
+                }
+            }
+        }
+    }
 }
 
 /**
@@ -49,19 +85,59 @@ bool do_exec(int count, ...)
     // and may be removed
     command[count] = command[count];
 
-/*
- * TODO:
- *   Execute a system command by calling fork, execv(),
- *   and wait instead of system (see LSP page 161).
- *   Use the command[0] as the full path to the command to execute
- *   (first argument to execv), and use the remaining arguments
- *   as second argument to the execv() command.
- *
-*/
+	bool parent = true;
+    bool result = true;
+	pid_t pid = fork();
+    if (pid < 0)
+    {
+        printf("Fork failed. errno: %d. strerror output: %s\n", errno, strerror(errno));
+        result = false;
+    }
+    else
+    {
+        if ( pid == 0 )
+        {
+            parent = false;
+            execv(command[0], command);
+            printf("An error occured. Returning status value on child: %d\n", errno);
+            exit(errno);
+        }
+        if (parent)
+        {
+            int status;
+            waitpid(pid, &status, 0);
+            if (WIFEXITED(status))
+            {
+                int exit_code = WEXITSTATUS(status);
+                if (exit_code == 0)
+                {
+                    printf("The process executed with SUCCESS (exit code 0).\n");
+                }
+                else
+                {
+                    printf("The process exited normally but with errno %d. strerror output: %s\n", exit_code, strerror(exit_code));
+                    result = false;
+                }
+            }
+            else
+            {
+                if (WIFSIGNALED(status))
+                {
+                    printf("The process was killed by a signal.\n");
+                    result = false;
+                } 
+                else 
+                {
+                    printf("The process did not exit normally.\n");
+                    result = false;
+                }
+            }
+        }
+    }
 
     va_end(args);
 
-    return true;
+    return result;
 }
 
 /**
@@ -84,6 +160,62 @@ bool do_exec_redirect(const char *outputfile, int count, ...)
     // and may be removed
     command[count] = command[count];
 
+    bool result = true;
+    int pid;
+    int fd = open(outputfile, O_WRONLY|O_TRUNC|O_CREAT, 0644);
+    if (fd < 0)
+    { 
+        perror("open failed");
+        result = false;
+    }
+    switch (pid = fork()) 
+    {
+        case -1:
+            perror("fork failed"); 
+            result = false;
+            break;
+        case 0:
+            if (dup2(fd, 1) < 0) 
+            { 
+                perror("dup2 failed"); 
+                abort();
+            }
+            close(fd);
+            execv(command[0], command);
+            perror("An error occured on execv. Returning status value on child.");
+            exit(errno);
+        default:
+            int status;
+            waitpid(pid, &status, 0);
+            if (WIFEXITED(status))
+            {
+                int exit_code = WEXITSTATUS(status);
+                if (exit_code == 0)
+                {
+                    printf("The process executed with SUCCESS (exit code 0).\n");
+                }
+                else
+                {
+                    perror("The process exited normally but with error status.");
+                    result = false;
+                }
+            }
+            else
+            {
+                if (WIFSIGNALED(status))
+                {
+                    perror("The process was killed by a signal.");
+                    result = false;
+                } 
+                else 
+                {
+                    perror("The process did not exit normally.");
+                    result = false;
+                }
+            }
+            close(fd);
+    }
+
 
 /*
  * TODO
@@ -95,5 +227,5 @@ bool do_exec_redirect(const char *outputfile, int count, ...)
 
     va_end(args);
 
-    return true;
+    return result;
 }
