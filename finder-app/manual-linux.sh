@@ -63,7 +63,7 @@ mkdir -p var/log
 cd "$OUTDIR"
 if [ ! -d "${OUTDIR}/busybox" ]
 then
-git clone git://busybox.net/busybox.git
+git clone https://git.busybox.net/busybox/
     cd busybox
     git checkout ${BUSYBOX_VERSION}
 
@@ -85,9 +85,15 @@ cp $(${CROSS_COMPILE}gcc -print-file-name=libm.so.6) ${OUTDIR}/rootfs/lib64/
 cp $(${CROSS_COMPILE}gcc -print-file-name=libresolv.so.2) ${OUTDIR}/rootfs/lib64/
 cp $(${CROSS_COMPILE}gcc -print-file-name=libc.so.6) ${OUTDIR}/rootfs/lib64/
 
-sudo rm ${OUTDIR}/rootfs/dev/null
+if [ -f "${OUTDIR}/rootfs/dev/null" ]
+then
+    sudo rm ${OUTDIR}/rootfs/dev/null
+fi
 sudo mknod -m 666 ${OUTDIR}/rootfs/dev/null c 1 3
-sudo rm ${OUTDIR}/rootfs/dev/tty
+if [ -f "${OUTDIR}/rootfs/dev/tty" ]
+then
+    sudo rm ${OUTDIR}/rootfs/dev/tty
+fi
 sudo mknod -m 666 ${OUTDIR}/rootfs/dev/tty c 5 1
 
 cd "$CURRENTDIR"
