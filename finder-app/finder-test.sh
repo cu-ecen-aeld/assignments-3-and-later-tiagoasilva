@@ -9,13 +9,21 @@ NUMFILES=10
 WRITESTR=AELD_IS_FUN
 WRITEDIR=/tmp/aeld-data
 username=$(cat conf/username.txt)
+OUTFILE=/tmp/assignment4-result.txt
+
+{
+  echo "--- Assignment 4 Results ---"
+  echo "User: $USER"
+  echo "Date: $(date)"
+  echo "----------------------------"
+} > "$OUTFILE"
 
 if [ $# -lt 3 ]
 then
-	echo "Using default value ${WRITESTR} for string to write"
+	echo "Using default value ${WRITESTR} for string to write" | tee -a "$OUTFILE"
 	if [ $# -lt 1 ]
 	then
-		echo "Using default value ${NUMFILES} for number of files to write"
+		echo "Using default value ${NUMFILES} for number of files to write" | tee -a "$OUTFILE"
 	else
 		NUMFILES=$1
 	fi	
@@ -27,7 +35,7 @@ fi
 
 MATCHSTR="The number of files are ${NUMFILES} and the number of matching lines are ${NUMFILES}"
 
-echo "Writing ${NUMFILES} files containing string ${WRITESTR} to ${WRITEDIR}"
+echo "Writing ${NUMFILES} files containing string ${WRITESTR} to ${WRITEDIR}" | tee -a "$OUTFILE"
 
 rm -rf "${WRITEDIR}"
 
@@ -43,7 +51,7 @@ then
 	#This issue can also be resolved by using double square brackets i.e [[ ]] instead of using quotes.
 	if [ -d "$WRITEDIR" ]
 	then
-		echo "$WRITEDIR created"
+		echo "$WRITEDIR created" | tee -a "$OUTFILE"
 	else
 		exit 1
 	fi
@@ -66,9 +74,9 @@ rm -rf /tmp/aeld-data
 set +e
 echo ${OUTPUTSTRING} | grep "${MATCHSTR}"
 if [ $? -eq 0 ]; then
-	echo "success"
+	echo "success" | tee -a "$OUTFILE"
 	exit 0
 else
-	echo "failed: expected  ${MATCHSTR} in ${OUTPUTSTRING} but instead found"
+	echo "failed: expected  ${MATCHSTR} in ${OUTPUTSTRING} but instead found" | tee -a "$OUTFILE"
 	exit 1
 fi
